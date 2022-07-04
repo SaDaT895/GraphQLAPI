@@ -1,0 +1,26 @@
+mutation {
+	addAccountDetails(data: {
+		user_id: 1,
+		user_name: "John Doe",
+		back_accounts: [
+			"HDFC0CAGSBK",
+			"HDFC0003933"
+		]
+	}) {
+		id
+		name
+		accounts {
+			bank
+			branch
+			address
+			city
+			district
+			state
+			bank_code
+			weather {
+				temp
+				humidity
+			}
+		}
+	}
+}
