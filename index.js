@@ -1,4 +1,5 @@
 const { ApolloServer, gql } = require('apollo-server');
+const axios = require('axios');
 var admin = require("firebase-admin");
 
 var serviceAccount = require("./solvee-intern-8b67252d5b2f.json");
@@ -13,13 +14,13 @@ db.settings({ ignoreUndefinedProperties: true })
 const typeDefs = gql`
   
     type User {
-        id: ID
-        name: String
+        id: ID!
+        name: String!
         accounts: [Account]
     }
 
     type Account {
-        userID: User!
+        userID: ID!
         bank: String!
         branch: String!
         address: String!
@@ -74,11 +75,29 @@ const resolvers = {
                 })
             }
             user = await db.collection('User').where('id', '==', userID).get();
-            res = user.docs[0].data(); 
+            details = user.docs[0].data(); 
             //Add bank data from IFSC endpoint
-            
-            console.log(res);
-            return res;
+            let userAccounts = []
+            for (x in accounts) {
+                await axios.get('https://ifsc.razorpay.com/' + accounts[x])
+                .then(res => res.data).then(res => {
+                    myObj = {};
+                    myObj.bank = res.BANK;
+                    myObj.branch = res.BRANCH;
+                    myObj.address = res.ADDRESS;
+                    myObj.city = res.CITY;
+                    myObj.district = res.DISTRICT;
+                    myObj.state = res.STATE;
+                    myObj.bankcode = res.BANKCODE;
+                    myObj.ifsc = accounts[x];
+                    myObj.userID = userID;
+                    userAccounts.push(myObj);
+                })
+                .catch(error => console.log(error))
+            }
+            details.accounts = userAccounts
+            console.log(details);
+            return details;
         }
     }
 };
