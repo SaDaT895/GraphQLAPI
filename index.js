@@ -13,6 +13,15 @@ admin.initializeApp({
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true })
 
+//Helper Functions
+const getProps = (props,obj) => {
+    return props.reduce((result, key) => ({
+        ...result,
+        [key.toLowerCase()]: obj[key]
+    }), {});
+}
+
+
 //GQL types and mutations
 const typeDefs = gql`
   
@@ -30,7 +39,7 @@ const typeDefs = gql`
         city: String!
         district: String!
         state: String!
-        bank_code: String!  
+        bankcode: String!  
         ifsc: String!
         weather: Weather!
     }
@@ -84,15 +93,7 @@ const resolvers = {
             for (x in accounts) {
                 let response = await axios.get(`https://ifsc.razorpay.com/${accounts[x]}`);
                 let res = response.data;
-                let myObj = {};
-                myObj.bank = res.BANK;
-                myObj.branch = res.BRANCH
-                myObj.address = res.ADDRESS;
-                myObj.city = res.CITY;
-                myObj.district = res.DISTRICT;
-                myObj.state = res.STATE;
-                myObj.bank_code = res.BANKCODE;
-                myObj.ifsc = accounts[x];
+                let myObj = getProps(['BANK', 'BRANCH', 'ADDRESS', 'CITY', 'DISTRICT', 'STATE', 'BANKCODE', 'IFSC'],res);   
                 myObj.userID = userID;
                 myObj.weather = {};
                 userAccounts = [...userAccounts, myObj];
@@ -104,11 +105,7 @@ const resolvers = {
                 let city = myObj.city;
                 let weatherResponse = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${key}`);
                 let data = weatherResponse.data.main;
-                let weather = {};
-                weather.temp = data.temp;
-                weather.humidity = data.humidity;
-                console.log(weather);
-                myObj.weather = weather;
+                myObj.weather = (['temp', 'humidity'], data);
             }
             console.log(details);
             return details;
