@@ -97,7 +97,20 @@ const resolvers = {
             }
             details.accounts = userAccounts
             //Weather data from OpenWeather endpoint
-            
+            //Loading the API key
+            var key = require('./api-keys.json')['API_KEY'];
+            for(i in userAccounts) {
+                weather = {}
+                let city = userAccounts[i].city;
+                // let district = userAccounts[i].district;
+                // let state = userAccounts[i].state;
+                let response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${key}`);
+                let data = response.data.main;
+                weather.temp = data.temp;
+                weather.humidity = data.humidity;
+                console.log(weather)
+                details.accounts[i].weather = weather;
+            }
             console.log(details);
             return details;
         }
