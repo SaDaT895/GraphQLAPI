@@ -47,6 +47,7 @@ const typeDefs = gql`
     type Weather {
         temp: Float
         humidity: Float
+        ifsc: String
     }
     
     type Mutation {
@@ -55,20 +56,25 @@ const typeDefs = gql`
     }
 
     type Query {
-        users: [User]
+        user(id: ID!): User
     }
     `;
 
 const resolvers = {
     Query: {
-        async users() {
-            const accounts = await db.collection('User').get();
-            return accounts.docs.map(account => account.data());
+        user: async(_, {id}) => {
+            let user = await db.collection('User').doc(id).get();
+            let accounts = await db.collection('Account').where('userID','==',id).get();
+            let res = accounts.docs.map(x => x.data());
+            for(i in res) {
+                let temp = res[i];
+                let data = await db.collection('Weather').doc(temp.ifsc).get()
+                res[i] = {...temp,'weather': data.data()}
+            }
+            console.log(res);
+            return {...user.data(),'accounts': res };
         },
     },
-    User: {},
-    Account: {},
-    Weather: {},
     Mutation: {
         addAccountDetails: async (_, {userID, userName, accounts}) => {
             //Adding or Updating User on DB
@@ -95,6 +101,7 @@ const resolvers = {
                 let res = response.data;
                 let myObj = getProps(['BANK', 'BRANCH', 'ADDRESS', 'CITY', 'DISTRICT', 'STATE', 'BANKCODE', 'IFSC'],res);   
                 myObj.userID = userID;
+                await db.collection('Account').doc(userID + accounts[x]).set(myObj);
                 myObj.weather = {};
                 userAccounts = [...userAccounts, myObj];
             }
@@ -105,7 +112,9 @@ const resolvers = {
                 let city = myObj.city;
                 let weatherResponse = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${key}`);
                 let data = weatherResponse.data.main;
-                myObj.weather = (['temp', 'humidity'], data);
+                myObj.weather = getProps(['temp', 'humidity'], data);
+                myObj.weather.ifsc =  myObj.ifsc;
+                await db.collection('Weather').doc(myObj.ifsc).set(myObj.weather);
             }
             console.log(details);
             return details;
