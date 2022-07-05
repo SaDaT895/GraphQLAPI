@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 #API Keys and Client secrets
+api-keys.json
 solvee-intern-8b67252d5b2f.json
-
