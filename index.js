@@ -91,11 +91,13 @@ const resolvers = {
                     myObj.bankcode = res.BANKCODE;
                     myObj.ifsc = accounts[x];
                     myObj.userID = userID;
-                    userAccounts.push(myObj);
+                    userAccounts = [...userAccounts,myObj];
                 })
                 .catch(error => console.log(error))
             }
             details.accounts = userAccounts
+            //Weather data from OpenWeather endpoint
+            
             console.log(details);
             return details;
         }
