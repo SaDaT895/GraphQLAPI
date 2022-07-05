@@ -2,15 +2,18 @@ const { ApolloServer, gql } = require('apollo-server');
 const axios = require('axios');
 var admin = require("firebase-admin");
 
+
 var serviceAccount = require("./solvee-intern-8b67252d5b2f.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
 
+//Get Firestore DB instance from Firebase
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true })
 
+//GQL types and mutations
 const typeDefs = gql`
   
     type User {
@@ -33,8 +36,8 @@ const typeDefs = gql`
     }
 
     type Weather {
-        temp: Int
-        humidity: Int
+        temp: Float
+        humidity: Float
     }
     
     type Mutation {
@@ -79,37 +82,33 @@ const resolvers = {
             //Add bank data from IFSC endpoint
             let userAccounts = []
             for (x in accounts) {
-                await axios.get('https://ifsc.razorpay.com/' + accounts[x])
-                .then(res => res.data).then(res => {
-                    myObj = {};
-                    myObj.bank = res.BANK;
-                    myObj.branch = res.BRANCH;
-                    myObj.address = res.ADDRESS;
-                    myObj.city = res.CITY;
-                    myObj.district = res.DISTRICT;
-                    myObj.state = res.STATE;
-                    myObj.bankcode = res.BANKCODE;
-                    myObj.ifsc = accounts[x];
-                    myObj.userID = userID;
-                    userAccounts = [...userAccounts,myObj];
-                })
-                .catch(error => console.log(error))
+                let response = await axios.get(`https://ifsc.razorpay.com/${accounts[x]}`);
+                let res = response.data;
+                let myObj = {};
+                myObj.bank = res.BANK;
+                myObj.branch = res.BRANCH
+                myObj.address = res.ADDRESS;
+                myObj.city = res.CITY;
+                myObj.district = res.DISTRICT;
+                myObj.state = res.STATE;
+                myObj.bank_code = res.BANKCODE;
+                myObj.ifsc = accounts[x];
+                myObj.userID = userID;
+                myObj.weather = {};
+                userAccounts = [...userAccounts, myObj];
             }
-            details.accounts = userAccounts
-            //Weather data from OpenWeather endpoint
-            //Loading the API key
+            details.accounts = userAccounts;
             var key = require('./api-keys.json')['API_KEY'];
-            for(i in userAccounts) {
-                weather = {}
-                let city = userAccounts[i].city;
-                // let district = userAccounts[i].district;
-                // let state = userAccounts[i].state;
-                let response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${key}`);
-                let data = response.data.main;
+            for (i in details.accounts) {
+                let myObj = details.accounts[i];
+                let city = myObj.city;
+                let weatherResponse = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${key}`);
+                let data = weatherResponse.data.main;
+                let weather = {};
                 weather.temp = data.temp;
                 weather.humidity = data.humidity;
-                console.log(weather)
-                details.accounts[i].weather = weather;
+                console.log(weather);
+                myObj.weather = weather;
             }
             console.log(details);
             return details;
